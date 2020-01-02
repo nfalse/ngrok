@@ -1,3 +1,5 @@
+*.key
+*.crt
 *.swp
 bin/
 pkg/
@@ -6,5 +8,5 @@ src/github.com
 src/bitbucket.org
 src/launchpad.net
 src/gopkg.in
-src/ngrok/client/assets/
-src/ngrok/server/assets/
+src/ngrok/client/assets/*.go
+src/ngrok/server/assets/*.go

@@ -1,5 +1,9 @@
-.PHONY: default server client deps fmt clean all release-all assets client-assets server-assets contributors
 export GOPATH:=$(shell pwd)
+export GOBIN:=$(shell pwd)/bin
+.PHONY: default server client deps fmt clean all release-all assets client-assets server-assets contributors
+NGROK_DOMAIN="nfalse.com"
+GOOS=linux
+GOARCH=amd64
 
 BUILDTAGS=debug
 default: all
@@ -19,7 +23,7 @@ client: deps
 assets: client-assets server-assets
 
 bin/go-bindata:
-	GOOS="" GOARCH="" go get github.com/jteeuwen/go-bindata/go-bindata
+	GOOS="$(GOOS)" GOARCH="$(GOARCH)" go get github.com/jteeuwen/go-bindata/go-bindata
 
 client-assets: bin/go-bindata
 	bin/go-bindata -nomemcopy -pkg=assets -tags=$(BUILDTAGS) \
@@ -41,11 +45,24 @@ release-server: server
 
 release-all: fmt release-client release-server
 
+generate-key:
+	openssl genrsa -out ca.key 2048
+	openssl req -x509 -new -nodes -key ca.key -subj "/CN=$(NGROK_DOMAIN)" -days 5000 -out ca.pem
+	openssl genrsa -out device.key 2048
+	openssl req -new -key device.key -subj "/CN=$(NGROK_DOMAIN)" -out device.csr
+	openssl x509 -req -in device.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out device.crt -days 5000
+	mkdir -p assets/ca assets/server/tls assets/client/tls
+	mv ca.pem assets/client/tls/ngrokroot.crt
+	mv device.crt assets/server/tls/snakeoil.crt
+	mv device.key assets/server/tls/snakeoil.key
+	mv ca.key assets/ca/ca.key
+	rm -f ca.srl device.csr
+
 all: fmt client server
 
 clean:
 	go clean -i -r ngrok/...
-	rm -rf src/ngrok/client/assets/ src/ngrok/server/assets/
+	rm -f ca.key ca.srl device.csr
 
 contributors:
 	echo "Contributors to ngrok, both large and small:\n" > CONTRIBUTORS
